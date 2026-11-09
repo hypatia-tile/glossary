@@ -19,7 +19,7 @@ func newEnv(t *testing.T) (Env, string) {
 	return Env{
 		Store: store.Files{Dir: dir},
 		Now:   func() time.Time { return time.Date(2026, 11, 8, 12, 0, 0, 0, time.Local) },
-		// Enough bytes for several quote IDs, all different.
+		// Enough bytes for several citation IDs, all different.
 		Rand: bytes.NewReader([]byte{0xa3, 0xf0, 0x9c, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06}),
 	}, dir
 }
@@ -107,9 +107,9 @@ func TestPutRejects(t *testing.T) {
 		{`{"kind":"entry","headword":"x","senses":[{}]}`, "senses[0]", "at least one"},
 		{`{"kind":"entry","headword":"x","synonyms":["X"]}`, "synonyms[0]", "itself"},
 		{`{"kind":"morpheme","type":"stem","form":"spect"}`, "type", "unknown type"},
-		{`{"kind":"quote","text":"hi","entries":[]}`, "entries", "at least one"},
-		{`{"kind":"quote","text":"hi","url":"example.com","entries":[{"ref":"hi"}]}`, "url", "http"},
-		{`{"kind":"quote","text":"hi","tags":["two words"],"entries":[{"ref":"hi"}]}`, "tags[0]", "no spaces"},
+		{`{"kind":"citation","text":"hi","entries":[]}`, "entries", "at least one"},
+		{`{"kind":"citation","text":"hi","url":"example.com","entries":[{"ref":"hi"}]}`, "url", "http"},
+		{`{"kind":"citation","text":"hi","tags":["two words"],"entries":[{"ref":"hi"}]}`, "tags[0]", "no spaces"},
 	} {
 		if errs := putErrors(t, env, tc.js); !hasError(errs, tc.path, tc.substr) {
 			t.Errorf("%s: got %v, want %s: …%s…", tc.js, errs, tc.path, tc.substr)
@@ -119,7 +119,7 @@ func TestPutRejects(t *testing.T) {
 
 func TestDryRunWritesNothing(t *testing.T) {
 	env, dir := newEnv(t)
-	res, err := env.Put([]byte(`{"kind":"quote","text":"It was ubiquitous.","entries":[{"ref":"ubiquitous"}]}`), true)
+	res, err := env.Put([]byte(`{"kind":"citation","text":"It was ubiquitous.","entries":[{"ref":"ubiquitous"}]}`), true)
 	if err != nil || !res.OK || len(res.Stubs) != 1 {
 		t.Fatalf("got %+v, %v", res, err)
 	}
@@ -128,25 +128,25 @@ func TestDryRunWritesNothing(t *testing.T) {
 	}
 }
 
-func TestPutQuote(t *testing.T) {
+func TestPutCitation(t *testing.T) {
 	env, dir := newEnv(t)
 	mustPut(t, env, `{"kind":"entry","headword":"practitioner"}`)
-	res := mustPut(t, env, `{"kind":"quote",
+	res := mustPut(t, env, `{"kind":"citation",
 		"text":"The findings were  ubiquitous\nyet ignored by practitioners.",
 		"url":"https://example.com/paper","tags":["Genre:Paper","genre:paper"],
 		"entries":[{"ref":"ubiquitous"},{"ref":"practitioner"}]}`)
-	q := res.Record.(*model.Quote)
-	if q.ID != "q-20261108-a3f09c" || q.Met != "2026-11-08" {
-		t.Errorf("got id %s met %s", q.ID, q.Met)
+	c := res.Record.(*model.Citation)
+	if c.ID != "c-20261108-a3f09c" || c.Met != "2026-11-08" {
+		t.Errorf("got id %s met %s", c.ID, c.Met)
 	}
-	if q.Text != "The findings were ubiquitous yet ignored by practitioners." {
-		t.Errorf("text not squashed: %q", q.Text)
+	if c.Text != "The findings were ubiquitous yet ignored by practitioners." {
+		t.Errorf("text not squashed: %q", c.Text)
 	}
-	if !slices.Equal(q.Tags, []string{"genre:paper"}) {
-		t.Errorf("tags: %v", q.Tags)
+	if !slices.Equal(c.Tags, []string{"genre:paper"}) {
+		t.Errorf("tags: %v", c.Tags)
 	}
-	if q.Entries[0].Ref != "ubiquitous-1" || q.Entries[1].Ref != "practitioner-1" {
-		t.Errorf("refs not stored as ids: %+v", q.Entries)
+	if c.Entries[0].Ref != "ubiquitous-1" || c.Entries[1].Ref != "practitioner-1" {
+		t.Errorf("refs not stored as ids: %+v", c.Entries)
 	}
 	if len(res.Stubs) != 1 || res.Stubs[0].ID != "ubiquitous-1" {
 		t.Errorf("stubs: %+v", res.Stubs)
@@ -156,30 +156,30 @@ func TestPutQuote(t *testing.T) {
 	}
 }
 
-func TestPutQuoteChecksTheWordIsInTheText(t *testing.T) {
+func TestPutCitationChecksTheWordIsInTheText(t *testing.T) {
 	env, _ := newEnv(t)
 	mustPut(t, env, `{"kind":"entry","headword":"run into"}`)
-	if errs := putErrors(t, env, `{"kind":"quote","text":"She ran into a friend.","entries":[{"ref":"run into"}]}`); !hasError(errs, "entries[0].form", "set form") {
+	if errs := putErrors(t, env, `{"kind":"citation","text":"She ran into a friend.","entries":[{"ref":"run into"}]}`); !hasError(errs, "entries[0].form", "set form") {
 		t.Errorf("got %v", errs)
 	}
-	if errs := putErrors(t, env, `{"kind":"quote","text":"She ran into a friend.","entries":[{"ref":"run into","form":"rna into"}]}`); !hasError(errs, "entries[0].form", "does not appear") {
+	if errs := putErrors(t, env, `{"kind":"citation","text":"She ran into a friend.","entries":[{"ref":"run into","form":"rna into"}]}`); !hasError(errs, "entries[0].form", "does not appear") {
 		t.Errorf("typo in form: got %v", errs)
 	}
-	mustPut(t, env, `{"kind":"quote","text":"She ran into a friend.","entries":[{"ref":"run into","form":"ran into"}]}`)
+	mustPut(t, env, `{"kind":"citation","text":"She ran into a friend.","entries":[{"ref":"run into","form":"ran into"}]}`)
 }
 
-func TestPutQuoteAmbiguousRef(t *testing.T) {
+func TestPutCitationAmbiguousRef(t *testing.T) {
 	env, _ := newEnv(t)
 	mustPut(t, env, `{"kind":"entry","headword":"bank"}`)
 	mustPut(t, env, `{"kind":"entry","headword":"bank"}`)
-	errs := putErrors(t, env, `{"kind":"quote","text":"by the bank","entries":[{"ref":"bank"}]}`)
+	errs := putErrors(t, env, `{"kind":"citation","text":"by the bank","entries":[{"ref":"bank"}]}`)
 	if !hasError(errs, "entries[0].ref", "bank-1, bank-2") {
 		t.Errorf("got %v", errs)
 	}
-	if errs := putErrors(t, env, `{"kind":"quote","text":"by the bank","entries":[{"ref":"bank-7"}]}`); !hasError(errs, "entries[0].ref", "no entry") {
+	if errs := putErrors(t, env, `{"kind":"citation","text":"by the bank","entries":[{"ref":"bank-7"}]}`); !hasError(errs, "entries[0].ref", "no entry") {
 		t.Errorf("missing id: got %v", errs)
 	}
-	mustPut(t, env, `{"kind":"quote","text":"by the bank","entries":[{"ref":"bank-2"}]}`)
+	mustPut(t, env, `{"kind":"citation","text":"by the bank","entries":[{"ref":"bank-2"}]}`)
 }
 
 func TestPutMorpheme(t *testing.T) {
@@ -203,8 +203,8 @@ func TestShow(t *testing.T) {
 	mustPut(t, env, `{"kind":"entry","headword":"inspect","parts":["in-","spect"],"synonyms":["examine"]}`)
 	mustPut(t, env, `{"kind":"entry","headword":"conspicuous","parts":["con-","spic"]}`)
 	mustPut(t, env, `{"kind":"entry","headword":"scrutinize","synonyms":["inspect"]}`)
-	mustPut(t, env, `{"kind":"quote","text":"Inspect the logs.","tags":["genre:docs"],"entries":[{"ref":"inspect"}]}`)
-	mustPut(t, env, `{"kind":"quote","text":"They inspected it.","tags":["genre:docs","domain:ops"],"entries":[{"ref":"inspect"}]}`)
+	mustPut(t, env, `{"kind":"citation","text":"Inspect the logs.","tags":["genre:docs"],"entries":[{"ref":"inspect"}]}`)
+	mustPut(t, env, `{"kind":"citation","text":"They inspected it.","tags":["genre:docs","domain:ops"],"entries":[{"ref":"inspect"}]}`)
 
 	res, err := env.Show("inspect")
 	if err != nil {
@@ -221,8 +221,8 @@ func TestShow(t *testing.T) {
 	if len(v.SameRoot) != 1 || v.SameRoot[0].Morpheme != "root-spect" || v.SameRoot[0].Entries[0].Text != "conspicuous" {
 		t.Errorf("same root: got %+v", v.SameRoot)
 	}
-	if len(v.Quotes) != 2 {
-		t.Errorf("quotes: got %d", len(v.Quotes))
+	if len(v.Citations) != 2 {
+		t.Errorf("citations: got %d", len(v.Citations))
 	}
 	if want := []TagCount{{"genre:docs", 2}, {"domain:ops", 1}}; !slices.Equal(v.Tags, want) {
 		t.Errorf("tags: got %v", v.Tags)
@@ -244,7 +244,7 @@ func linkEqual(a, b Link) bool {
 func TestCheck(t *testing.T) {
 	env, dir := newEnv(t)
 	mustPut(t, env, `{"kind":"entry","headword":"inspect","parts":["spect"]}`)
-	mustPut(t, env, `{"kind":"quote","text":"Inspect it.","entries":[{"ref":"inspect"}]}`)
+	mustPut(t, env, `{"kind":"citation","text":"Inspect it.","entries":[{"ref":"inspect"}]}`)
 	ps, err := env.Check()
 	if err != nil {
 		t.Fatal(err)

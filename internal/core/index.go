@@ -15,7 +15,7 @@ import (
 type Index struct {
 	Entries   map[string]*model.Entry
 	Morphemes map[string]*model.Morpheme
-	Quotes    map[string]*model.Quote
+	Citations map[string]*model.Citation
 
 	byHeadword map[string][]string // lowercased headword → entry IDs
 	byForm     map[string][]string // form or variant → morpheme IDs
@@ -25,7 +25,7 @@ func newIndex(snap *store.Snapshot) *Index {
 	ix := &Index{
 		Entries:    map[string]*model.Entry{},
 		Morphemes:  map[string]*model.Morpheme{},
-		Quotes:     map[string]*model.Quote{},
+		Citations:  map[string]*model.Citation{},
 		byHeadword: map[string][]string{},
 		byForm:     map[string][]string{},
 	}
@@ -46,8 +46,8 @@ func (ix *Index) add(r model.Record) {
 		for _, f := range append([]string{r.Form}, r.Variants...) {
 			ix.byForm[f] = sortedInsert(ix.byForm[f], r.ID)
 		}
-	case *model.Quote:
-		ix.Quotes[r.ID] = r
+	case *model.Citation:
+		ix.Citations[r.ID] = r
 	}
 }
 

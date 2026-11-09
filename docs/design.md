@@ -65,10 +65,14 @@ A prefix, suffix or root, defined once: `type` (`prefix` | `suffix` |
 entry, variants (`spic` for `spect`) can match, and "other words with this
 root" comes from looking up which entries name it.
 
-### Quote
+### Citation
 
 A sentence met somewhere: `text`, `url`, `tags[]`, `met` (date),
-`entries[]` as `{ref, form}`. ID: `q-<YYYYMMDD>-<6 hex>`.
+`entries[]` as `{ref, form}`. ID: `c-<YYYYMMDD>-<6 hex>`.
+
+**Why "citation":** it is the lexicographers' term for an example sentence
+collected with its source and date. It was called "quote" at first, which
+did not read as "quoted from a source".
 
 **Why its own record:** one sentence often holds several new words; it is
 stored once and linked to each.
@@ -79,8 +83,8 @@ text is corrected, and a form is enough to find the word again.
 
 ### Tags
 
-Lowercase strings on quotes, optionally `key:value` (`genre:paper`,
-`domain:ml`). An entry's tags are counted from its quotes and never stored on
+Lowercase strings on citations, optionally `key:value` (`genre:paper`,
+`domain:ml`). An entry's tags are counted from its citations and never stored on
 the entry. **Why the convention instead of fixed fields:** a new kind of tag
 needs no schema change.
 
@@ -94,7 +98,7 @@ needs no schema change.
   `in-` is a prefix, `-ion` a suffix, `spect` any type.
 - **Links are stored one way.** `show` adds the reverse: a synonym stored on
   A appears on B too, and `phrase_of` appears in reverse as `phrases`.
-- **Quote links are stored as IDs.** `put` resolves each `ref` and writes the
+- **Citation links are stored as IDs.** `put` resolves each `ref` and writes the
   entry's ID, because a headword that is unique today may not stay unique.
   A headword with no entry gets a stub entry holding only the headword.
 
@@ -105,9 +109,9 @@ are not edited by hand.
 
 - Unknown fields, unknown kinds and types, malformed dates, URLs and tags are
   rejected.
-- Whitespace is normalised; quote text becomes one line, so text copied with
+- Whitespace is normalised; citation text becomes one line, so text copied with
   line breaks is accepted.
-- **A quote's linked word must appear in its text** (the form if given, else
+- **A citation's linked word must appear in its text** (the form if given, else
   the headword, ignoring case). This catches a typo in either the sentence or
   the form.
 - An update must name an existing ID; `created` cannot change; an entry's
@@ -125,7 +129,7 @@ One file per record under `$GLOSSARY_DIR` (default `~/.local/share/glossary`):
 ```
 entries/bank-1.json
 morphemes/root-spect.json
-quotes/q-20261108-a3f09c.json
+citations/c-20261108-a3f09c.json
 ```
 
 Every read and write goes through the `store.Store` interface (`Load`

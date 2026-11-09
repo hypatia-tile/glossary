@@ -15,7 +15,7 @@ import (
 )
 
 // Env is what the commands run against. Now and Rand are fields so tests can
-// fix the date and the quote IDs.
+// fix the date and the citation IDs.
 type Env struct {
 	Store store.Store
 	Now   func() time.Time
@@ -30,7 +30,7 @@ type PutResult struct {
 	Action string       `json:"action,omitempty"` // "create" or "update"
 	ID     string       `json:"id,omitempty"`
 	Record model.Record `json:"record,omitempty"`
-	// Stubs are entries created because a quote linked a headword that had
+	// Stubs are entries created because a citation linked a headword that had
 	// no entry yet. They hold only the headword.
 	Stubs    []*model.Entry `json:"stubs,omitempty"`
 	Warnings []string       `json:"warnings,omitempty"`
@@ -64,8 +64,8 @@ func (env Env) Put(data []byte, dryRun bool) (*PutResult, error) {
 		errs = env.putEntry(ix, r, res)
 	case *model.Morpheme:
 		errs = env.putMorpheme(ix, r, res)
-	case *model.Quote:
-		errs = env.putQuote(ix, r, res)
+	case *model.Citation:
+		errs = env.putCitation(ix, r, res)
 	}
 	if errs != nil {
 		res.Errors = errs
@@ -146,36 +146,36 @@ func (env Env) putMorpheme(ix *Index, m *model.Morpheme, res *PutResult) model.E
 	return nil
 }
 
-func (env Env) putQuote(ix *Index, q *model.Quote, res *PutResult) model.Errors {
-	if q.ID == "" {
-		if q.Created != "" {
+func (env Env) putCitation(ix *Index, c *model.Citation, res *PutResult) model.Errors {
+	if c.ID == "" {
+		if c.Created != "" {
 			return model.Errors{{Path: "created", Message: "set by the tool; leave it out"}}
 		}
-		id, err := env.newQuoteID(ix)
+		id, err := env.newCitationID(ix)
 		if err != nil {
 			return model.Errors{{Message: err.Error()}}
 		}
-		q.ID = id
-		q.Created = env.today()
+		c.ID = id
+		c.Created = env.today()
 		res.Action = "create"
 	} else {
-		old, ok := ix.Quotes[q.ID]
+		old, ok := ix.Citations[c.ID]
 		if !ok {
-			return model.Errors{{Path: "id", Message: fmt.Sprintf("no quote %q; leave id out to create one", q.ID)}}
+			return model.Errors{{Path: "id", Message: fmt.Sprintf("no citation %q; leave id out to create one", c.ID)}}
 		}
-		if errs := keepCreated(&q.Created, old.Created); errs != nil {
+		if errs := keepCreated(&c.Created, old.Created); errs != nil {
 			return errs
 		}
 		res.Action = "update"
 	}
-	if q.Met == "" {
-		q.Met = q.Created
+	if c.Met == "" {
+		c.Met = c.Created
 	}
 
 	var errs model.Errors
 	linked := map[string]bool{}
-	for i := range q.Entries {
-		l := &q.Entries[i]
+	for i := range c.Entries {
+		l := &c.Entries[i]
 		path := fmt.Sprintf("entries[%d]", i)
 		var id string
 		switch ids := ix.ResolveEntry(l.Ref); len(ids) {
@@ -208,7 +208,7 @@ func (env Env) putQuote(ix *Index, q *model.Quote, res *PutResult) model.Errors 
 		}
 		linked[id] = true
 		// The word must be in the sentence; this catches a typo in either.
-		if msg := formProblem(q.Text, ix.Entries[id].Headword, l.Form); msg != "" {
+		if msg := formProblem(c.Text, ix.Entries[id].Headword, l.Form); msg != "" {
 			errs = append(errs, model.FieldError{Path: path + ".form", Message: msg})
 		}
 		// Store the ID: a headword that is unique today may not stay unique.
@@ -256,18 +256,18 @@ func looksLikeEntryID(ref string) bool {
 	return model.Slug(ref) == ref && entryIDPattern.MatchString(ref)
 }
 
-func (env Env) newQuoteID(ix *Index) (string, error) {
-	prefix := "q-" + env.Now().Format("20060102") + "-"
+func (env Env) newCitationID(ix *Index) (string, error) {
+	prefix := "c-" + env.Now().Format("20060102") + "-"
 	b := make([]byte, 3)
 	for range 10 {
 		if _, err := io.ReadFull(env.Rand, b); err != nil {
 			return "", err
 		}
-		if id := prefix + hex.EncodeToString(b); ix.Quotes[id] == nil {
+		if id := prefix + hex.EncodeToString(b); ix.Citations[id] == nil {
 			return id, nil
 		}
 	}
-	return "", errors.New("could not find a free quote id")
+	return "", errors.New("could not find a free citation id")
 }
 
 // refWarnings lists an entry's references that do not resolve to exactly one

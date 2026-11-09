@@ -59,16 +59,16 @@ func renderEntry(w io.Writer, v core.EntryView) {
 	for _, sr := range v.SameRoot {
 		field(w, "same "+sr.Morpheme, links(sr.Entries))
 	}
-	if len(v.Quotes) > 0 {
-		fmt.Fprintln(w, "  quotes:")
-		for _, q := range v.Quotes {
-			fmt.Fprintf(w, "    %s  %s\n", q.Met, q.Text)
+	if len(v.Citations) > 0 {
+		fmt.Fprintln(w, "  citations:")
+		for _, c := range v.Citations {
+			fmt.Fprintf(w, "    %s  %s\n", c.Met, c.Text)
 			var meta []string
-			if q.URL != "" {
-				meta = append(meta, q.URL)
+			if c.URL != "" {
+				meta = append(meta, c.URL)
 			}
-			if len(q.Tags) > 0 {
-				meta = append(meta, "["+strings.Join(q.Tags, " ")+"]")
+			if len(c.Tags) > 0 {
+				meta = append(meta, "["+strings.Join(c.Tags, " ")+"]")
 			}
 			if len(meta) > 0 {
 				fmt.Fprintf(w, "                %s\n", strings.Join(meta, "  "))

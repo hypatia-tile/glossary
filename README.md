@@ -21,7 +21,7 @@ answer is "no" (invalid record, nothing found, `check` found errors) and 2
 when the command could not run.
 
 ```sh
-echo '{"kind":"quote","text":"She ran into an old friend.",
+echo '{"kind":"citation","text":"She ran into an old friend.",
        "url":"https://example.com","tags":["genre:novel"],
        "entries":[{"ref":"run into","form":"ran into"}]}' | glossary put
 glossary show "run into"

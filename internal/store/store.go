@@ -36,7 +36,7 @@ type Problem struct {
 }
 
 // Files stores one JSON file per record: <Dir>/entries/<id>.json,
-// <Dir>/morphemes/<id>.json and <Dir>/quotes/<id>.json.
+// <Dir>/morphemes/<id>.json and <Dir>/citations/<id>.json.
 type Files struct {
 	Dir string
 }
@@ -44,7 +44,7 @@ type Files struct {
 var dirs = map[model.Kind]string{
 	model.KindEntry:    "entries",
 	model.KindMorpheme: "morphemes",
-	model.KindQuote:    "quotes",
+	model.KindCitation: "citations",
 }
 
 // idPattern keeps IDs usable as file names on every system.
@@ -52,7 +52,7 @@ var idPattern = regexp.MustCompile(`^[\p{Ll}\p{Lo}\p{N}][\p{Ll}\p{Lo}\p{N}-]*$`)
 
 func (f Files) Load() (*Snapshot, error) {
 	snap := &Snapshot{}
-	for _, kind := range []model.Kind{model.KindEntry, model.KindMorpheme, model.KindQuote} {
+	for _, kind := range []model.Kind{model.KindEntry, model.KindMorpheme, model.KindCitation} {
 		dir := filepath.Join(f.Dir, dirs[kind])
 		names, err := os.ReadDir(dir)
 		if errors.Is(err, fs.ErrNotExist) {

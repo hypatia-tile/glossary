@@ -25,7 +25,7 @@ const (
 	SevWarning = "warning"
 )
 
-var quoteIDPattern = regexp.MustCompile(`^q-[0-9]{8}-[0-9a-f]{6}$`)
+var citationIDPattern = regexp.MustCompile(`^c-[0-9]{8}-[0-9a-f]{6}$`)
 
 // Check validates every stored record and the links between them.
 func (env Env) Check() ([]Problem, error) {
@@ -66,10 +66,10 @@ func (env Env) Check() ([]Problem, error) {
 			if id != r.DerivedID() {
 				add(SevError, id, "id", fmt.Sprintf("want %q, from type and form", r.DerivedID()))
 			}
-		case *model.Quote:
+		case *model.Citation:
 			created = r.Created
-			if !quoteIDPattern.MatchString(id) {
-				add(SevError, id, "id", "want an id like q-20261108-a3f09c")
+			if !citationIDPattern.MatchString(id) {
+				add(SevError, id, "id", "want an id like c-20261108-a3f09c")
 			}
 			for i, l := range r.Entries {
 				path := fmt.Sprintf("entries[%d]", i)
@@ -96,7 +96,7 @@ func (env Env) Check() ([]Problem, error) {
 	return ps, nil
 }
 
-// formProblem checks that the linked word is in a quote's text: form if
+// formProblem checks that the linked word is in a citation's text: form if
 // given, else the headword. The check is a plain substring match ignoring
 // case, so "practitioner" is found in "practitioners".
 func formProblem(text, headword, form string) string {

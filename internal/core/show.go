@@ -35,10 +35,10 @@ type EntryView struct {
 	Related  []Link       `json:"related,omitempty"`
 	PhraseOf []Link       `json:"phrase_of,omitempty"`
 	// Phrases are the entries whose phrase_of points at this one.
-	Phrases  []Link         `json:"phrases,omitempty"`
-	SameRoot []SameRoot     `json:"same_root,omitempty"`
-	Quotes   []*model.Quote `json:"quotes,omitempty"`
-	// Tags counts the tags of this entry's quotes, most frequent first.
+	Phrases   []Link            `json:"phrases,omitempty"`
+	SameRoot  []SameRoot        `json:"same_root,omitempty"`
+	Citations []*model.Citation `json:"citations,omitempty"`
+	// Tags counts the tags of this entry's citations, most frequent first.
 	Tags []TagCount `json:"tags,omitempty"`
 }
 
@@ -130,17 +130,17 @@ func (ix *Index) entryView(id string) EntryView {
 	}
 
 	counts := map[string]int{}
-	for _, qid := range sortedKeys(ix.Quotes) {
-		q := ix.Quotes[qid]
-		if !slices.ContainsFunc(q.Entries, func(l model.QuoteLink) bool { return l.Ref == id }) {
+	for _, cid := range sortedKeys(ix.Citations) {
+		c := ix.Citations[cid]
+		if !slices.ContainsFunc(c.Entries, func(l model.CitationLink) bool { return l.Ref == id }) {
 			continue
 		}
-		v.Quotes = append(v.Quotes, q)
-		for _, t := range q.Tags {
+		v.Citations = append(v.Citations, c)
+		for _, t := range c.Tags {
 			counts[t]++
 		}
 	}
-	slices.SortStableFunc(v.Quotes, func(a, b *model.Quote) int { return cmp.Compare(a.Met, b.Met) })
+	slices.SortStableFunc(v.Citations, func(a, b *model.Citation) int { return cmp.Compare(a.Met, b.Met) })
 	for _, t := range sortedKeys(counts) {
 		v.Tags = append(v.Tags, TagCount{t, counts[t]})
 	}

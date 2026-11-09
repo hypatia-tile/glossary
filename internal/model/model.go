@@ -1,5 +1,5 @@
 // Package model defines the three record kinds the glossary stores — entries,
-// morphemes and quotes — and how each is decoded, normalised and validated.
+// morphemes and citations — and how each is decoded, normalised and validated.
 //
 // Nothing here knows about other records: whether a reference resolves is
 // decided by package core, which sees the whole store.
@@ -18,10 +18,10 @@ type Kind string
 const (
 	KindEntry    Kind = "entry"
 	KindMorpheme Kind = "morpheme"
-	KindQuote    Kind = "quote"
+	KindCitation Kind = "citation"
 )
 
-// Record is implemented by *Entry, *Morpheme and *Quote.
+// Record is implemented by *Entry, *Morpheme and *Citation.
 type Record interface {
 	RecordKind() Kind
 	RecordID() string
@@ -80,21 +80,21 @@ type Morpheme struct {
 	Created  string       `json:"created,omitempty"`
 }
 
-// Quote is a sentence met somewhere, linked to the entries it was kept for.
-type Quote struct {
-	Kind    Kind        `json:"kind"`
-	ID      string      `json:"id,omitempty"`
-	Text    string      `json:"text"`
-	URL     string      `json:"url,omitempty"`
-	Tags    []string    `json:"tags,omitempty"`
-	Met     string      `json:"met,omitempty"`
-	Entries []QuoteLink `json:"entries"`
-	Created string      `json:"created,omitempty"`
+// Citation is a sentence met somewhere, linked to the entries it was kept for.
+type Citation struct {
+	Kind    Kind           `json:"kind"`
+	ID      string         `json:"id,omitempty"`
+	Text    string         `json:"text"`
+	URL     string         `json:"url,omitempty"`
+	Tags    []string       `json:"tags,omitempty"`
+	Met     string         `json:"met,omitempty"`
+	Entries []CitationLink `json:"entries"`
+	Created string         `json:"created,omitempty"`
 }
 
-// QuoteLink ties a quote to one entry. Form is the word as written in the
+// CitationLink ties a citation to one entry. Form is the word as written in the
 // text ("ran into" for "run into"); empty means the headword itself.
-type QuoteLink struct {
+type CitationLink struct {
 	Ref  string `json:"ref"`
 	Form string `json:"form,omitempty"`
 }
@@ -103,8 +103,8 @@ func (e *Entry) RecordKind() Kind    { return KindEntry }
 func (e *Entry) RecordID() string    { return e.ID }
 func (m *Morpheme) RecordKind() Kind { return KindMorpheme }
 func (m *Morpheme) RecordID() string { return m.ID }
-func (q *Quote) RecordKind() Kind    { return KindQuote }
-func (q *Quote) RecordID() string    { return q.ID }
+func (c *Citation) RecordKind() Kind { return KindCitation }
+func (c *Citation) RecordID() string { return c.ID }
 
 // DerivedID is the ID a morpheme must have: "<type>-<form>".
 func (m *Morpheme) DerivedID() string { return string(m.Type) + "-" + m.Form }
@@ -150,12 +150,12 @@ func Decode(data []byte) (Record, error) {
 		r = &Entry{}
 	case KindMorpheme:
 		r = &Morpheme{}
-	case KindQuote:
-		r = &Quote{}
+	case KindCitation:
+		r = &Citation{}
 	case "":
-		return nil, Errors{{Path: "kind", Message: `required: one of "entry", "morpheme", "quote"`}}
+		return nil, Errors{{Path: "kind", Message: `required: one of "entry", "morpheme", "citation"`}}
 	default:
-		return nil, Errors{{Path: "kind", Message: fmt.Sprintf(`unknown kind %q: want "entry", "morpheme" or "quote"`, head.Kind)}}
+		return nil, Errors{{Path: "kind", Message: fmt.Sprintf(`unknown kind %q: want "entry", "morpheme" or "citation"`, head.Kind)}}
 	}
 	dec := json.NewDecoder(bytes.NewReader(data))
 	dec.DisallowUnknownFields()

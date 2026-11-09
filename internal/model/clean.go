@@ -87,22 +87,22 @@ func (m *Morpheme) Clean() Errors {
 	return errs
 }
 
-func (q *Quote) Clean() Errors {
+func (c *Citation) Clean() Errors {
 	var errs Errors
-	// Copied text often carries line breaks and double spaces; a quote is
+	// Copied text often carries line breaks and double spaces; a citation is
 	// one line.
-	q.Text = squash(q.Text)
-	if q.Text == "" {
+	c.Text = squash(c.Text)
+	if c.Text == "" {
 		errs.add("text", "required")
 	}
-	q.URL = strings.TrimSpace(q.URL)
-	if q.URL != "" {
-		if u, err := url.Parse(q.URL); err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
-			errs.add("url", "%q: want an http or https URL", q.URL)
+	c.URL = strings.TrimSpace(c.URL)
+	if c.URL != "" {
+		if u, err := url.Parse(c.URL); err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+			errs.add("url", "%q: want an http or https URL", c.URL)
 		}
 	}
 	var tags []string
-	for i, t := range q.Tags {
+	for i, t := range c.Tags {
 		t = strings.ToLower(strings.TrimSpace(t))
 		switch {
 		case !tagPattern.MatchString(t):
@@ -111,14 +111,14 @@ func (q *Quote) Clean() Errors {
 			tags = append(tags, t)
 		}
 	}
-	q.Tags = tags
-	checkDate(&errs, "met", q.Met)
-	if len(q.Entries) == 0 {
+	c.Tags = tags
+	checkDate(&errs, "met", c.Met)
+	if len(c.Entries) == 0 {
 		errs.add("entries", "at least one entry is required")
 	}
 	var seen []string
-	for i := range q.Entries {
-		l := &q.Entries[i]
+	for i := range c.Entries {
+		l := &c.Entries[i]
 		l.Ref = squash(l.Ref)
 		l.Form = squash(l.Form)
 		path := fmt.Sprintf("entries[%d]", i)
@@ -131,7 +131,7 @@ func (q *Quote) Clean() Errors {
 			seen = append(seen, strings.ToLower(l.Ref))
 		}
 	}
-	checkDate(&errs, "created", q.Created)
+	checkDate(&errs, "created", c.Created)
 	return errs
 }
 
