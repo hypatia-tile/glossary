@@ -32,12 +32,16 @@ an API key anyway.
 
 ## Records
 
-Three kinds, each one JSON file. Every record has `kind` and `id`; `created`
-is set by the tool.
+A record consists of a `kind` (`entry`, `morpheme` or `citation`), an `id`,
+a `created` date, and the fields of its kind. The tool sets `id` and
+`created`; every other field comes from the input. Each record is stored as
+one JSON file.
 
 ### Entry
 
-One per spelling **and** etymology: "bank" of a river and "bank" for money
+An entry consists of a headword and, optionally, its senses, its etymology,
+the morphemes it is made of, and references to other entries. There is one
+entry per spelling **and** etymology: "bank" of a river and "bank" for money
 are `bank-1` and `bank-2`. Senses and parts of speech sit inside the entry.
 A phrase ("run into") is its own entry, linked to its head word by
 `phrase_of`.
@@ -57,18 +61,42 @@ origin, not to one of its senses.
 
 ### Morpheme
 
-A prefix, suffix or root, defined once: `type` (`prefix` | `suffix` |
-`root`), `form`, `variants[]`, `meaning`, `origin`. ID: `<type>-<form>`, e.g.
-`root-spect`; type and form cannot change after creation.
+A morpheme consists of a type, a form, and optionally its variant spellings,
+its meaning and its origin. It is a prefix, suffix or root, defined once and
+referenced from the `parts` of entries.
+
+| Field | |
+|---|---|
+| `type` | Required: `prefix`, `suffix` or `root`. |
+| `form` | Required. Lowercase letters only; `in-` and `-ion` are stored as `in` and `ion`. |
+| `variants[]` | Other spellings of the same morpheme, e.g. `spic` for `spect`. |
+| `meaning` | Free text. |
+| `origin` | Free text, e.g. "Latin specere". |
+
+ID: `<type>-<form>`, e.g. `root-spect`. Type and form therefore cannot change
+after creation.
 
 **Why its own record:** the meaning is written once instead of in every
-entry, variants (`spic` for `spect`) can match, and "other words with this
-root" comes from looking up which entries name it.
+entry, variants can match, and "other words with this root" comes from
+looking up which entries name it.
 
 ### Citation
 
-A sentence met somewhere: `text`, `url`, `tags[]`, `met` (date),
-`entries[]` as `{ref, form}`. ID: `c-<YYYYMMDD>-<6 hex>`.
+A citation consists of a sentence met somewhere, the entries it was kept
+for, and optionally where and when it was met and how it is tagged.
+
+| Field | |
+|---|---|
+| `text` | Required. The sentence, stored as one line. |
+| `entries[]` | Required, at least one: `{ref, form}`, the entries this sentence was kept for. |
+| `url` | Where it was met; `http` or `https`. |
+| `tags[]` | See [Tags](#tags). |
+| `met` | The date it was met; defaults to the day it was put. |
+
+`form` is the word as written in the text ("ran into" for "run into"); empty
+means the headword.
+
+ID: `c-<YYYYMMDD>-<6 hex>`.
 
 **Why "citation":** it is the lexicographers' term for an example sentence
 collected with its source and date. It was called "quote" at first, which
@@ -77,16 +105,17 @@ did not read as "quoted from a source".
 **Why its own record:** one sentence often holds several new words; it is
 stored once and linked to each.
 
-`form` is the word as written in the text ("ran into" for "run into"); empty
-means the headword. **Why not character offsets:** offsets break when the
-text is corrected, and a form is enough to find the word again.
+**Why `form` and not character offsets:** offsets break when the text is
+corrected, and a form is enough to find the word again.
 
 ### Tags
 
-Lowercase strings on citations, optionally `key:value` (`genre:paper`,
-`domain:ml`). An entry's tags are counted from its citations and never stored on
-the entry. **Why the convention instead of fixed fields:** a new kind of tag
-needs no schema change.
+A tag consists of a lowercase name and, optionally, a key: `paper`, or
+`genre:paper`, `domain:ml`. Tags are stored on citations only. An entry's
+tags are counted from its citations and never stored on the entry.
+
+**Why the `key:value` convention instead of fixed fields:** a new kind of
+tag needs no schema change.
 
 ## References
 
