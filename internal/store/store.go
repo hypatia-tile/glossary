@@ -50,40 +50,69 @@ var dirs = map[model.Kind]string{
 // idPattern keeps IDs usable as file names on every system.
 var idPattern = regexp.MustCompile(`^[\p{Ll}\p{Lo}\p{N}][\p{Ll}\p{Lo}\p{N}-]*$`)
 
+// kinds is the order Load reads the kind directories in.
+var kinds = []model.Kind{model.KindEntry, model.KindMorpheme, model.KindCitation}
+
 func (f Files) Load() (*Snapshot, error) {
 	snap := &Snapshot{}
-	for _, kind := range []model.Kind{model.KindEntry, model.KindMorpheme, model.KindCitation} {
-		dir := filepath.Join(f.Dir, dirs[kind])
-		names, err := os.ReadDir(dir)
-		if errors.Is(err, fs.ErrNotExist) {
-			continue
-		}
+	for _, kind := range kinds {
+		paths, err := jsonFiles(filepath.Join(f.Dir, dirs[kind]))
 		if err != nil {
 			return nil, err
 		}
-		for _, de := range names {
-			if de.IsDir() || !strings.HasSuffix(de.Name(), ".json") {
-				continue
-			}
-			path := filepath.Join(dir, de.Name())
-			data, err := os.ReadFile(path)
-			if err != nil {
-				return nil, err
-			}
-			r, err := model.Decode(data)
+		for _, path := range paths {
+			r, p, err := loadFile(path, kind)
 			switch {
 			case err != nil:
-				snap.Problems = append(snap.Problems, Problem{path, err.Error()})
-			case r.RecordKind() != kind:
-				snap.Problems = append(snap.Problems, Problem{path, fmt.Sprintf("a %s record in %s/", r.RecordKind(), dirs[kind])})
-			case r.RecordID()+".json" != de.Name():
-				snap.Problems = append(snap.Problems, Problem{path, fmt.Sprintf("id %q does not match the file name", r.RecordID())})
+				return nil, err
+			case p != nil:
+				snap.Problems = append(snap.Problems, *p)
 			default:
 				snap.Records = append(snap.Records, r)
 			}
 		}
 	}
 	return snap, nil
+}
+
+// jsonFiles lists the record files in one kind's directory, in name order.
+// The layout is flat, so subdirectories are skipped, not descended into. A
+// missing directory is an empty list.
+func jsonFiles(dir string) ([]string, error) {
+	des, err := os.ReadDir(dir)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	var paths []string
+	for _, de := range des {
+		if !de.IsDir() && strings.HasSuffix(de.Name(), ".json") {
+			paths = append(paths, filepath.Join(dir, de.Name()))
+		}
+	}
+	return paths, nil
+}
+
+// loadFile reads one record file expected to hold a record of kind. A file
+// that cannot be read is a fatal error; one that reads but is not a valid
+// record of that kind, under its own ID, is a Problem.
+func loadFile(path string, kind model.Kind) (model.Record, *Problem, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, nil, err
+	}
+	r, err := model.Decode(data)
+	switch {
+	case err != nil:
+		return nil, &Problem{path, err.Error()}, nil
+	case r.RecordKind() != kind:
+		return nil, &Problem{path, fmt.Sprintf("a %s record in %s/", r.RecordKind(), dirs[kind])}, nil
+	case r.RecordID()+".json" != filepath.Base(path):
+		return nil, &Problem{path, fmt.Sprintf("id %q does not match the file name", r.RecordID())}, nil
+	}
+	return r, nil, nil
 }
 
 func (f Files) Save(recs ...model.Record) error {
